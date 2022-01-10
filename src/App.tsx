@@ -1,25 +1,45 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import Landing from './pages/Main';
+import { createTheme, ThemeOptions, ThemeProvider } from '@mui/material/styles';
+import { Container } from '@mui/material';
+declare module '@mui/material/styles' {
+  interface Theme {
+    status: {
+      danger: string;
+    };
+  }
+  // allow configuration using `createTheme`
+  interface ThemeOptions {
+    status?: {
+      danger?: string;
+    };
+  }
+}
+
+
+export const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#f50057',
+    },
+    secondary: {
+      main: '#f50057',
+    },
+  },
+});
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ThemeProvider theme={theme}>
+      <div className="App">
+        <header className="App-header">
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', margin: '0px', padding: '0px', minWidth: '100%', position: 'relative'}}>
+            <Landing />
+          </div>
+        </header>
+      </div>
+    </ThemeProvider>
   );
 }
 
