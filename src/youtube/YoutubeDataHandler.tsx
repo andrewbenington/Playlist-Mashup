@@ -26,8 +26,6 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
                 if (userData.thumbnails?.default) {
                     userData = { id: res.data.items[0].id, display_name: userData.title, profileImageURL: userData.thumbnails.default.url };
                 }
-                //const playlistData = await getYoutubeUserPlaylists();
-                // userData = { ...userData, playlists: playlistData.items, nextPlaylistURL: playlistData.next, getNextPlaylist: getMoreYoutubeUserPlaylists };
                 return userData;
             }
         } catch (e: any) {
@@ -41,13 +39,31 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
 
     const getYoutubeUserPlaylists = async () => {
         try {
-            const res = await axios.get('https://youtube.googleapis.com/youtube/v3/playlists?part=snippet%2CcontentDetails&maxResults=25&mine=true', {
+            const res = await axios.get('https://youtube.googleapis.com/youtube/v3/playlists?part=snippet%2CcontentDetails%2Cstatus&maxResults=25&mine=true', {
                 headers: {
                     Authorization: `Bearer ${youtubeData.accessToken}`,
                     'Content-Type': 'application/json'
                 }
             });
-            return res.data;
+            if (res.data?.items?.length) {
+                const playlists = res.data.items.map((playlist: any) => {
+                    return {
+                        name: playlist.snippet?.title,
+                        description: playlist.snippet?.description,
+                        id: playlist.id,
+                        images: [
+                            playlist.snippet?.thumbnails?.default,
+                            playlist.snippet?.thumbnails?.medium,
+                            playlist.snippet?.thumbnails?.high,
+                        ],
+                        owner: playlist.snippet?.channelTitle,
+                        privacy_status: playlist.status?.privacyStatus,
+                        tracks: { total: playlist.contentDetails?.itemCount },
+                    }
+                });
+                const nextTracksURL = res.data.nextPageToken ? `https://youtube.googleapis.com/youtube/v3/playlists?part=snippet%2CcontentDetails%2Cstatus&maxResults=25&mine=true&pageToken=${res.data.nextPageToken}` : undefined;
+                return { playlists, nextTracksURL };
+            }
         } catch (e: any) {
             console.log(e);
             if (e.response.status === 401) {
@@ -57,6 +73,45 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
         }
     }
 
+    const getMoreYoutubeUserPlaylists = async (currentYoutubeUser: YoutubeUser) => {
+        if (currentYoutubeUser?.nextTracksURL && currentYoutubeUser?.playlists) {
+            try {
+                const res = await axios.get(currentYoutubeUser?.nextTracksURL, {
+                    headers: {
+                        Authorization: `Bearer ${youtubeData.accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const morePlaylists = res.data.items.map((playlist: any) => {
+                    return {
+                        name: playlist.snippet?.title,
+                        description: playlist.snippet?.description,
+                        id: playlist.id,
+                        images: [
+                            playlist.snippet?.thumbnails?.default,
+                            playlist.snippet?.thumbnails?.medium,
+                            playlist.snippet?.thumbnails?.high,
+                        ],
+                        owner: playlist.snippet?.channelTitle,
+                        privacy_status: playlist.status?.privacyStatus,
+                        tracks: { total: playlist.contentDetails?.itemCount },
+                    }
+                });
+                const nextTracksURL = res.data.nextPageToken ? `https://youtube.googleapis.com/youtube/v3/playlists?part=snippet%2CcontentDetails%2Cstatus&maxResults=25&mine=true&pageToken=${res.data.nextPageToken}` : undefined;
+                return {
+                    ...currentYoutubeUser,
+                    playlists: [...currentYoutubeUser.playlists, ...morePlaylists],
+                    nextTracksURL,
+                }
+            } catch (e: any) {
+                console.log(e);
+                if (e?.response?.status === 401) {
+                    window.localStorage.removeItem("youtubeAccessToken");
+                    removeAccessToken();
+                }
+            }
+        }
+    }
 
     const updateYoutubeData = async () => {
         var userData;
@@ -74,7 +129,16 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
         if (userData) {
             try {
                 const playlistData = await getYoutubeUserPlaylists();
-                userData = { ...userData, playlists: playlistData.items, nextPlaylistURL: playlistData.next};//, getNextPlaylist: getMoreYoutubeUserPlaylists };
+                if (!playlistData) {
+                    return;
+                }
+                const { playlists, nextTracksURL } = playlistData;
+                userData = {
+                    ...userData,
+                    playlists,
+                    nextTracksURL,
+                    getNextPlaylist: getMoreYoutubeUserPlaylists
+                };
                 setUser(userData);
             } catch (e) {
                 console.log(e);
@@ -89,11 +153,13 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
             const data = {
                 grant_type: 'authorization_code',
                 code,
-                redirect_uri: process.env.REACT_APP_YOUTUBE_REDIRECT_URI
+                redirect_uri: process.env.REACT_APP_YOUTUBE_REDIRECT_URI,
+                client_id: process.env.REACT_APP_YOUTUBE_CLIENTID,
+                client_secret: process.env.REACT_APP_YOUTUBE_SECRET,
             }
             const res = await axios.post(`${process.env.REACT_APP_YOUTUBE_TOKEN_ENDPOINT}`, qs.stringify(data), {
                 headers: {
-                    Authorization: 'Basic ' + btoa(`${process.env.REACT_APP_YOUTUBE_CLIENTID}:${process.env.REACT_APP_YOUTUBE_SECRET}`),
+                    //Authorization: 'Basic ' + btoa(`${process.env.REACT_APP_YOUTUBE_CLIENTID}:${process.env.REACT_APP_YOUTUBE_SECRET} `),
                     'Content-Type': 'application/x-www-form-urlencoded',
                 }
             });
@@ -117,7 +183,7 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
                 client_id: process.env.REACT_APP_YOUTUBE_CLIENTID,
                 client_secret: process.env.REACT_APP_YOUTUBE_SECRET,
             }
-            const res = await axios.post(`${process.env.REACT_APP_YOUTUBE_TOKEN_ENDPOINT}`, qs.stringify(data), {
+            const res = await axios.post(`${process.env.REACT_APP_YOUTUBE_TOKEN_ENDPOINT} `, qs.stringify(data), {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 }
@@ -141,7 +207,7 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
         if (queries.get('state') === 'youtube') {
             var code = queries.get('code');
             if (code) {
-                window.history.replaceState({}, "", `${window.location.origin}${window.location.pathname}`)
+                window.history.replaceState({}, "", `${window.location.origin}${window.location.pathname} `)
                 getTokens(code);
             }
             queries.delete('state');

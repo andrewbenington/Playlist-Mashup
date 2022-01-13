@@ -12,9 +12,9 @@ export interface SpotifyPlaylist {
     id: string;
     images: SpotifyImage[];
     name: string;
-    owner: SpotifyUser;
+    owner: string;
     primary_color: any;
-    public: boolean;
+    privacy_status: string;
     snapshot_id: string;
     tracks: {
         href: string;
@@ -44,7 +44,7 @@ export interface SpotifyUser {
         total: number
     };
     playlists?: SpotifyPlaylist[];
-    nextPlaylistURL?: string;
+    nextTracksURL?: string;
     getNextPlaylist?: Function;
     profileImageURL?: string;
 }

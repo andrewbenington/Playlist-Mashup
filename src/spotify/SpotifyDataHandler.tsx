@@ -46,7 +46,15 @@ function SpotifyDataHandler(props: { spotifyData: SpotifyData, setSpotifyData: (
                     'Content-Type': 'application/json'
                 }
             });
-            return res.data;
+            const playlists = res.data.items.map((playlist: any) => {
+                return {
+                    ...playlist,
+                    privacy_status: playlist.public ? 'public' : 'private',
+                    owner: playlist.owner?.display_name,
+                }
+            });
+            const nextTracksURL = res.data.next ? res.data.next : undefined;
+            return { playlists, nextTracksURL };
         } catch (e: any) {
             console.log(e);
             if (e?.response?.status === 401) {
@@ -57,15 +65,25 @@ function SpotifyDataHandler(props: { spotifyData: SpotifyData, setSpotifyData: (
     }
 
     const getMoreSpotifyUserPlaylists = async (currentSpotifyUser: SpotifyUser) => {
-        if (currentSpotifyUser?.nextPlaylistURL && currentSpotifyUser?.playlists) {
+        if (currentSpotifyUser?.nextTracksURL && currentSpotifyUser?.playlists) {
             try {
-                const res = await axios.get(currentSpotifyUser?.nextPlaylistURL, {
+                const res = await axios.get(currentSpotifyUser?.nextTracksURL, {
                     headers: {
                         Authorization: `Bearer ${spotifyData.accessToken}`,
                         'Content-Type': 'application/json'
                     }
                 });
-                return { ...currentSpotifyUser, playlists: [...currentSpotifyUser.playlists, ...res.data.items], nextPlaylistURL: res.data.next, }
+                return {
+                    ...currentSpotifyUser, playlists: [
+                        ...currentSpotifyUser.playlists,
+                        ...res.data.items.map((playlist: any) => {
+                            return {
+                                ...playlist,
+                                privacy_status: playlist.public ? 'public' : 'private',
+                                owner: playlist.owner?.display_name,
+                            }
+                        })], nextTracksURL: res.data.next,
+                }
             } catch (e: any) {
                 console.log(e);
                 if (e?.response?.status === 401) {
@@ -90,7 +108,16 @@ function SpotifyDataHandler(props: { spotifyData: SpotifyData, setSpotifyData: (
         if (userData) {
             try {
                 const playlistData = await getSpotifyUserPlaylists();
-                userData = { ...userData, playlists: playlistData.items, nextPlaylistURL: playlistData.next, getNextPlaylist: getMoreSpotifyUserPlaylists };
+                if (!playlistData) {
+                    return;
+                }
+                const { playlists, nextTracksURL } = playlistData;
+                userData = {
+                    ...userData,
+                    playlists,
+                    nextTracksURL,
+                    getNextPlaylist: getMoreSpotifyUserPlaylists
+                };
                 setUser(userData);
             } catch (e: any) {
                 console.log(e);

@@ -10,6 +10,7 @@ import { YoutubeUser } from '../youtube/YoutubeConstants';
 import YoutubeDataHandler from '../youtube/YoutubeDataHandler';
 import YoutubeIcon from '../logos/YoutubeIcon';
 import { SpotifyData, YoutubeData } from '../constants';
+import YoutubePlaylists from '../components/YoutubePlaylists';
 
 function Main() {
     const [spotifyData, setSpotifyData] = useState<SpotifyData>({});
@@ -77,9 +78,12 @@ function Main() {
 
                 </Grid>
             </Grid>
-            {spotifyData?.user?.playlists && <SpotifyPlaylists
+            {playlistsDisplayed === 'spotify' && spotifyData?.user?.playlists && <SpotifyPlaylists
                 user={spotifyData.user}
                 setUser={(user: SpotifyUser | undefined) => setSpotifyData({ ...spotifyData, user })} />}
+            {playlistsDisplayed === 'youtube' && youtubeData?.user?.playlists && <YoutubePlaylists
+                user={youtubeData.user}
+                setUser={(user: YoutubeUser | undefined) => setYoutubeData({ ...youtubeData, user })} />}
         </div >
     );
 

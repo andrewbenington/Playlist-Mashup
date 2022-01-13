@@ -1,9 +1,9 @@
 import React from 'react';
 import { Box, Button } from "@mui/material";
-import { SpotifyPlaylist, SpotifyUser } from '../spotify/SpotifyConstants';
+import { YoutubePlaylist, YoutubeUser } from '../youtube/YoutubeConstants';
 
-function SpotifyPlaylists(props: { user: SpotifyUser, setUser: any }) {
-    const {setUser, user} = props;
+function YoutubePlaylists(props: { user: YoutubeUser, setUser: any }) {
+    const { setUser, user } = props;
     const { playlists, nextTracksURL, getNextPlaylist } = user;
 
     return <div style={{ flex: 1, position: 'relative' }}>
@@ -17,9 +17,9 @@ function SpotifyPlaylists(props: { user: SpotifyUser, setUser: any }) {
                 justifyContent: 'center',
                 alignItems: 'center',
             }}>
-                Spotify Playlists
+                Youtube Playlists
             </Box>
-            {playlists && playlists.map((playlist: SpotifyPlaylist) =>
+            {playlists && playlists.map((playlist: YoutubePlaylist) =>
                 <Box sx={{
                     height: 45,
                     backgroundColor: 'secondary.main',
@@ -66,4 +66,4 @@ function SpotifyPlaylists(props: { user: SpotifyUser, setUser: any }) {
     </div >
 }
 
-export default SpotifyPlaylists;
+export default YoutubePlaylists;
