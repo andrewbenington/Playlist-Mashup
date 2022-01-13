@@ -1,106 +1,86 @@
-import React, { useEffect, useState } from 'react';
-import { Avatar, Button, Grid, Typography } from '@mui/material';
-import YoutubeIcon from '../logos/YoutubeIcon';
+import React, { useState } from 'react';
+import { Grid, Button, Typography, ToggleButton, ToggleButtonGroup, styled, useTheme } from '@mui/material';
+import { SpotifyUser } from '../spotify/SpotifyConstants';
+import SpotifyDataHandler from '../spotify/SpotifyDataHandler';
 import SpotifyIcon from '../logos/SpotifyIcon';
-import { SpotifyPlaylist, SpotifyUser } from '../spotify/SpotifyConstants';
-import { Box } from '@mui/system';
-import SpotifyData from '../spotify/SpotifyData';
-import YoutubeData from '../youtube/YoutubeData';
+import SpotifyPlaylists from '../components/SpotifyPlaylists';
+import SpotifyUserButton from '../spotify/SpotifyUserButton';
+import YoutubeUserButton from '../youtube/YoutubeUserButton';
+import { YoutubeUser } from '../youtube/YoutubeConstants';
+import YoutubeDataHandler from '../youtube/YoutubeDataHandler';
+import YoutubeIcon from '../logos/YoutubeIcon';
+import { SpotifyData, YoutubeData } from '../constants';
 
 function Main() {
-    const [spotifyUser, setSpotifyUser] = useState<SpotifyUser>();
-    const [spotifyPlaylistOffset, setSpotifyPlaylistOffset] = useState(0);
-    const [youtubeToken, setYoutubeToken] = useState("");
+    const [spotifyData, setSpotifyData] = useState<SpotifyData>({});
+    const [youtubeData, setYoutubeData] = useState<YoutubeData>({});
+    const [playlistsDisplayed, setPlaylistsDisplayed] = useState<string | null>("spotify");
+    const theme = useTheme();
 
-    useEffect(() => {
-        if (window.location.pathname === 'youtube' && window.location.hash?.length > 1) {
-            const service = window.location.pathname.substring(1);
-            const elements = window.location.hash.substring(1).split("&");
-            console.log(window.location);
-            if (elements) {
-                var tokenSegment = elements.find(elem => elem.startsWith("access_token"));
-                if (tokenSegment) {
-                    const token = tokenSegment.split("=")[1];
-                    window.location.hash = ""
-                    window.localStorage.setItem(`youtubeToken`, token);
-                    setYoutubeToken(token);
-                }
-            }
-        } else {
-            var yToken = window.localStorage.getItem('youtubeToken')
-            if (yToken) {
-                setYoutubeToken(yToken);
-            }
+    const handlePlaylistToggle = (
+        event: React.MouseEvent<HTMLElement>,
+        newSelection: string | null,
+    ) => {
+        if (newSelection) {
+            setPlaylistsDisplayed(newSelection);
         }
-    }, [])
+    };
 
+    const StyledToggleButtonGroup = styled(ToggleButtonGroup)(({ theme }) => ({
+        '& .MuiToggleButtonGroup-grouped': {
+            '&.Mui-selected': {
+                border: 1,
+                backgroundColor: '#f50057',
+                '&:hover': {
+                    backgroundColor: theme.palette.primary.dark,
+                },
+            },
+        },
+    }));
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <SpotifyData setSpotifyUser={setSpotifyUser} spotifyUser={spotifyUser} />
-            <YoutubeData setYoutubeUser={() => { }} />
+            <SpotifyDataHandler
+                spotifyData={spotifyData} setSpotifyData={setSpotifyData} />
+            <YoutubeDataHandler
+                youtubeData={youtubeData} setYoutubeData={setYoutubeData} />
             <Grid container style={{ minWidth: '100%', backgroundColor: '#133C55', position: 'relative', top: 0, bottom: 0 }}>
                 <Grid item xs={2} style={{ alignItems: 'center', display: 'flex', padding: '10px 25px' }}>
-                    <Typography variant={'h3'} style={{ textAlign: 'center' }}>hooo</Typography>
+                    <StyledToggleButtonGroup
+                        value={playlistsDisplayed}
+                        exclusive
+                        onChange={handlePlaylistToggle}
+                        aria-label="selected playlists"
+                        fullWidth>
+                        <ToggleButton value="spotify" aria-label="spotify playlists">
+                            <SpotifyIcon />
+                        </ToggleButton>
+                        <ToggleButton value="youtube" aria-label="youtube playlists">
+                            <YoutubeIcon />
+                        </ToggleButton>
+                    </StyledToggleButtonGroup>
                 </Grid>
                 <Grid item xs={6} style={{ alignItems: 'center', display: 'flex', padding: '10px 25px' }}>
-                    <Typography variant={'h3'} style={{ textAlign: 'left' }}>Web Music Player</Typography>
+                    <Typography variant={'h3'} style={{ textAlign: 'left' }}>Playlist Mashup</Typography>
                 </Grid>
-                <Grid item xs={2} style={{ alignItems: 'center', display: 'flex' }}>
-                    {spotifyUser ? <Button variant="outlined">
-                        {spotifyUser.profileImageURL && <Avatar src={spotifyUser.profileImageURL} style={{ margin: '5px 10px 5px 0px' }} />}
-                        {spotifyUser.display_name}
-                    </Button>
-                        : <a href={`${process.env.REACT_APP_SPOTIFY_AUTH_ENDPOINT}?client_id=${process.env.REACT_APP_SPOTIFY_CLIENTID}&redirect_uri=${process.env.REACT_APP_SPOTIFY_REDIRECT_URI}&response_type=${process.env.REACT_APP_RESPONSE_TYPE}`} style={{ width: '100%', padding: '0px 25px 0px 0px' }}>
-                            <Button variant="contained" startIcon={<SpotifyIcon />} color={'secondary'} style={{ width: '100%' }}>
-                                Login
-                            </Button>
-                        </a>}
+                <Grid item xs={4} style={{ justifyContent: 'space-evenly', alignItems: 'center', display: 'flex' }}>
+                    <SpotifyUserButton spotifyUser={spotifyData.user} logOut={() => {
+                        setSpotifyData({});
+                        window.localStorage.removeItem("spotifyAccessToken");
+                        window.localStorage.removeItem("spotifyRefreshToken");
+                    }} />
+                    <YoutubeUserButton youtubeUser={youtubeData.user} logOut={() => {
+                        setYoutubeData({});
+                        window.localStorage.removeItem("youtubeAccessToken");
+                        window.localStorage.removeItem("youtubeRefreshToken");
+                    }} />
 
                 </Grid>
-                <Grid item xs={2} style={{ alignItems: 'center', display: 'flex', justifyContent: 'center' }}>
-                    {youtubeToken ? <Button variant="outlined">
-                        {/* {spotifyUserImage && <Avatar src={spotifyUserImage} style={{ margin: '5px 10px 5px 0px' }} />}
-                        {spotifyUser.display_name} */}
-                        Youtube Logged In
-                    </Button>
-                        : <a href={`${process.env.REACT_APP_YOUTUBE_AUTH_ENDPOINT}?client_id=${process.env.REACT_APP_YOUTUBE_CLIENTID}&redirect_uri=${process.env.REACT_APP_YOUTUBE_REDIRECT_URI}&response_type=${process.env.REACT_APP_RESPONSE_TYPE}&scope=${process.env.REACT_APP_YOUTUBE_SCOPE}`} style={{ width: '100%', padding: '0px 25px 0px 0px' }}>
-                            <Button variant="contained" startIcon={<YoutubeIcon />} color={'secondary'} style={{ width: '100%' }}>
-                                Login
-                            </Button>
-                        </a>}
-                </Grid>
             </Grid>
-            <div style={{ flex: 1, position: 'relative' }}>
-                <div style={{ position: 'absolute', top: 0, bottom: 0, overflowY: 'scroll', scrollbarColor: 'green', width: '16.666%' }}>
-                    <Box sx={{
-                        color: 'secondary.main',
-                        fontWeight: 'bold',
-                        height: 45,
-                        backgroundColor: 'white',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    }}>
-                        Spotify Playlists
-                    </Box>
-                    {spotifyUser?.playlists && spotifyUser.playlists.map((playlist: SpotifyPlaylist) =>
-                        <Box sx={{
-                            height: 45,
-                            backgroundColor: 'secondary.main',
-                            '&:hover': {
-                                backgroundColor: 'secondary.light',
-                                opacity: [0.9, 0.8, 0.7],
-                            },
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}>
-                            {playlist.name}
-                        </Box>)}
-                </div>
-            </div>
-        </div>
+            {spotifyData?.user?.playlists && <SpotifyPlaylists
+                user={spotifyData.user}
+                setUser={(user: SpotifyUser | undefined) => setSpotifyData({ ...spotifyData, user })} />}
+        </div >
     );
 
 }

@@ -22,20 +22,19 @@ export interface SpotifyPlaylist {
     },
     type: string;
     uri: string;
-
 }
 
 export interface SpotifyUser {
     country?: string;
-    display_name: string;
+    display_name?: string;
     email?: string;
     explicit_content?: {
         filter_enabled: boolean;
         filter_locked: boolean;
     };
     external_urls?: any;
-    href: string;
-    id: string;
+    href?: string;
+    id?: string;
     images?: SpotifyImage[];
     product?: string;
     type?: string;
@@ -46,5 +45,6 @@ export interface SpotifyUser {
     };
     playlists?: SpotifyPlaylist[];
     nextPlaylistURL?: string;
+    getNextPlaylist?: Function;
     profileImageURL?: string;
 }
