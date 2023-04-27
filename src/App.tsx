@@ -18,7 +18,12 @@ declare module '@mui/material/styles' {
   }
 }
 
-
+declare global {
+  interface Window {
+    Spotify: any;
+    onSpotifyWebPlaybackSDKReady: any;
+  }
+}
 
 export const theme = createTheme({
   palette: {

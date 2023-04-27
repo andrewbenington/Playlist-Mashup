@@ -1,10 +1,16 @@
-import React from 'react';
-import { Box, Button } from "@mui/material";
+import React, { useState } from 'react';
+import { Box, Button, styled, useTheme } from "@mui/material";
 import { YoutubePlaylist, YoutubeUser } from '../youtube/YoutubeConstants';
 
-function YoutubePlaylists(props: { user: YoutubeUser, setUser: any }) {
-    const { setUser, user } = props;
-    const { playlists, nextTracksURL, getNextPlaylist } = user;
+interface PlaylistSidebarProps {
+    user: YoutubeUser | undefined;
+    setUser: (user: YoutubeUser | undefined) => void;
+    currentPlaylist: string | undefined;
+    setCurrentPlaylist: (playlist: string | undefined) => void;
+}
+
+function YoutubePlaylists(props: PlaylistSidebarProps) {
+    const { setUser, user, currentPlaylist, setCurrentPlaylist } = props;
 
     return <div style={{ flex: 1, position: 'relative' }}>
         <div style={{ position: 'absolute', top: 0, bottom: 0, overflowY: 'scroll', scrollbarColor: 'green', width: '16.666%' }}>
@@ -19,26 +25,41 @@ function YoutubePlaylists(props: { user: YoutubeUser, setUser: any }) {
             }}>
                 Youtube Playlists
             </Box>
-            {playlists && playlists.map((playlist: YoutubePlaylist) =>
-                <Box sx={{
-                    height: 45,
-                    backgroundColor: 'secondary.main',
-                    '&:hover': {
-                        backgroundColor: 'primary.dark',
-                        cursor: 'pointer',
-                    },
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}>
-                    {playlist.name}
-                </Box>)}
-            {nextTracksURL && getNextPlaylist &&
+            {user?.playlists?.map((playlist: YoutubePlaylist) =>
                 <Button
+                    onClick={() => setCurrentPlaylist(playlist.id)}
+                    sx={{
+                        width: '100%',
+                        padding: 0,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        textTransform: 'none',
+                    }}>
+                    <Box sx={{
+                        height: 45,
+                        width: '100%',
+                        backgroundColor: currentPlaylist === playlist.id ? 'primary.main' : 'secondary.main',
+                        '&:hover': {
+                            backgroundColor: 'primary.dark',
+                            cursor: 'pointer',
+                        },
+                        color: 'text.primary',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}>
+                        {playlist.name}
+                    </Box>
+                </Button>)}
+            {user?.nextTracksURL && user?.getNextPlaylist &&
+                < Button
                     onClick={async () => {
-                        const newUserData = await getNextPlaylist(user);
-                        if (newUserData) {
-                            setUser(newUserData);
+                        if (user.getNextPlaylist) {
+                            const newUserData = await user.getNextPlaylist(user);
+                            if (newUserData) {
+                                setUser(newUserData);
+                            }
                         }
                     }}
                     sx={{

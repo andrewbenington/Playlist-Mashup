@@ -45,6 +45,31 @@ export interface SpotifyUser {
     };
     playlists?: SpotifyPlaylist[];
     nextTracksURL?: string;
-    getNextPlaylist?: Function;
     profileImageURL?: string;
+}
+
+export interface SpotifyTrack {
+    disabled: boolean,
+    album: string,
+    artist: string,
+    url: string,
+    id: string,
+    name: string,
+}
+
+export interface SpotifyTrackState {
+    position: number,
+    track_window?: any,
+    paused?: boolean,
+    name?: string,
+    album?: {
+        images?: SpotifyImage[],
+    },
+    image?: string,
+    artists?: [
+        { name?: string }
+    ],
+    timeString?: string,
+    lastSync?: number,
+    artist?: string,
 }

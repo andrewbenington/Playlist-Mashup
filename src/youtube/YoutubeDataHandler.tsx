@@ -7,8 +7,9 @@ import qs from 'qs';
 
 function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (data: YoutubeData) => void }) {
     const { youtubeData, setYoutubeData } = props;
-    const setUser = (user: YoutubeUser | undefined) => { setYoutubeData({ ...youtubeData, user }) };
-    const removeAccessToken = () => { setYoutubeData({ ...youtubeData, accessToken: undefined }) };
+    const setUser = (user: YoutubeUser | undefined) => { setYoutubeData({ ...youtubeData, user, loaded: true }) };
+    const removeAccessToken = () => { setYoutubeData({ ...youtubeData, accessToken: undefined, loaded: false }) };
+    const removeTokens = () => { setYoutubeData({ ...youtubeData, refreshToken: undefined, accessToken: undefined, loaded: false }) };
     const setTokens = (tokens: { refreshToken?: any, accessToken?: any }) => { setYoutubeData({ ...youtubeData, ...tokens }) };
     const queries = new URLSearchParams(location().search);
 
@@ -139,7 +140,6 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
                     nextTracksURL,
                     getNextPlaylist: getMoreYoutubeUserPlaylists
                 };
-                setUser(userData);
             } catch (e) {
                 console.log(e);
             }
@@ -196,8 +196,8 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
             console.log(e);
             if (e?.response?.status === 401) {
                 window.localStorage.removeItem("youtubeAccessToken");
-                removeAccessToken();
                 window.localStorage.removeItem("youtubeRefreshToken");
+                removeTokens();
             }
         }
     }
@@ -219,12 +219,12 @@ function YoutubeDataHandler(props: { youtubeData: YoutubeData, setYoutubeData: (
     }, [])
 
     useEffect(() => {
-        if (youtubeData.accessToken) {
+        if (!youtubeData.loaded && youtubeData.accessToken) {
             updateYoutubeData();
-        } else if (youtubeData.refreshToken) {
+        } else if (!youtubeData.loaded && youtubeData.refreshToken) {
             refreshAccessToken();
         }
-    }, [youtubeData.accessToken, youtubeData.refreshToken])
+    }, [youtubeData.accessToken, youtubeData.refreshToken, youtubeData.loaded])
 
     return <div></div>
 }

@@ -4,128 +4,63 @@ import { SpotifyUser } from './SpotifyConstants';
 import { useLocation as location } from "react-router-dom";
 import qs from 'qs';
 import { SpotifyData } from '../constants';
+import { getSpotifyUserData, getSpotifyUserPlaylists } from './SpotifyHTTPFunctions';
 
 
 function SpotifyDataHandler(props: { spotifyData: SpotifyData, setSpotifyData: (data: SpotifyData) => void }) {
     const { spotifyData, setSpotifyData } = props;
     const setUser = (user: SpotifyUser | undefined) => { setSpotifyData({ ...spotifyData, user }) };
-    const removeAccessToken = () => { setSpotifyData({ ...spotifyData, accessToken: undefined }) };
+    const removeAccessToken = () => { setSpotifyData({ ...spotifyData, accessToken: undefined, loaded: false }) };
+    const removeTokens = () => { setSpotifyData({ ...spotifyData, accessToken: undefined, refreshToken: undefined, loaded: false }) };
     const setTokens = (tokens: { refreshToken?: any, accessToken?: any }) => { setSpotifyData({ ...spotifyData, ...tokens }) };
     const queries = new URLSearchParams(location().search);
 
-    const getSpotifyUserData = async (token: string) => {
-        var userData = {};
-        try {
-            const res = await axios.get('https://api.spotify.com/v1/me', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (res.data) {
-                userData = res.data;
-                if (res.data.images?.length > 0) {
-                    userData = { ...userData, profileImageURL: res.data.images[0].url };
-                }
-                return userData;
-            } else {
-                return;
-            }
-        } catch (e: any) {
-            console.log(e);
-            window.localStorage.removeItem("spotifyAccessToken");
-            removeAccessToken();
-        }
-    }
-
-    const getSpotifyUserPlaylists = async () => {
-        try {
-            const res = await axios.get('https://api.spotify.com/v1/me/playlists?limit=25', {
-                headers: {
-                    Authorization: `Bearer ${spotifyData.accessToken}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            const playlists = res.data.items.map((playlist: any) => {
-                return {
-                    ...playlist,
-                    privacy_status: playlist.public ? 'public' : 'private',
-                    owner: playlist.owner?.display_name,
-                }
-            });
-            const nextTracksURL = res.data.next ? res.data.next : undefined;
-            return { playlists, nextTracksURL };
-        } catch (e: any) {
-            console.log(e);
-            if (e?.response?.status === 401) {
-                window.localStorage.removeItem("spotifyAccessToken");
-                removeAccessToken();
-            }
-        }
-    }
-
-    const getMoreSpotifyUserPlaylists = async (currentSpotifyUser: SpotifyUser) => {
-        if (currentSpotifyUser?.nextTracksURL && currentSpotifyUser?.playlists) {
-            try {
-                const res = await axios.get(currentSpotifyUser?.nextTracksURL, {
-                    headers: {
-                        Authorization: `Bearer ${spotifyData.accessToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                return {
-                    ...currentSpotifyUser, playlists: [
-                        ...currentSpotifyUser.playlists,
-                        ...res.data.items.map((playlist: any) => {
-                            return {
-                                ...playlist,
-                                privacy_status: playlist.public ? 'public' : 'private',
-                                owner: playlist.owner?.display_name,
-                            }
-                        })], nextTracksURL: res.data.next,
-                }
-            } catch (e: any) {
-                console.log(e);
-                if (e?.response?.status === 401) {
-                    window.localStorage.removeItem("spotifyAccessToken");
-                    removeAccessToken();
-                }
-            }
-        }
-    }
-
     const updateSpotifyData = async () => {
-        var userData;
+        var user;
         if (spotifyData.accessToken) {
             try {
-                userData = await getSpotifyUserData(spotifyData.accessToken);
+                const userData = await getSpotifyUserData(spotifyData.accessToken);
+                if (!userData) {
+                    return;
+                }
+                const { user: fetchedUser, error } = userData;
+                if (error) {
+                    if (error.response?.status === 401) {
+                        window.localStorage.removeItem("spotifyAccessToken");
+                        removeAccessToken();
+                    }
+                    return;
+                }
+                user = fetchedUser
             } catch (e: any) {
                 console.log(e);
                 window.localStorage.removeItem("spotifyAccessToken");
                 removeAccessToken();
             }
-        }
-        if (userData) {
-            try {
-                const playlistData = await getSpotifyUserPlaylists();
-                if (!playlistData) {
-                    return;
-                }
-                const { playlists, nextTracksURL } = playlistData;
-                userData = {
-                    ...userData,
-                    playlists,
-                    nextTracksURL,
-                    getNextPlaylist: getMoreSpotifyUserPlaylists
-                };
-                setUser(userData);
-            } catch (e: any) {
-                console.log(e);
-                if (e?.response?.status === 401) {
-                    window.localStorage.removeItem("spotifyAccessToken");
-                    removeAccessToken();
+            if (user) {
+                try {
+                    const playlistData = await getSpotifyUserPlaylists(spotifyData.accessToken);
+                    if (!playlistData) {
+                        return;
+                    }
+                    const { playlists, nextTracksURL, error } = playlistData;
+                    if (error) {
+                        if (error.response?.status === 401) {
+                            window.localStorage.removeItem("spotifyAccessToken");
+                            removeAccessToken();
+                        }
+                        return;
+                    }
+                    user = {
+                        ...user,
+                        playlists,
+                        nextTracksURL,
+                    };
+                } catch (e: any) {
+                    console.log(e);
                 }
             }
+            setUser(user);
         }
     }
 
@@ -175,8 +110,8 @@ function SpotifyDataHandler(props: { spotifyData: SpotifyData, setSpotifyData: (
             console.log(e);
             if (e?.response?.status === 401) {
                 window.localStorage.removeItem("spotifyAccessToken");
-                removeAccessToken();
                 window.localStorage.removeItem("spotifyRefreshToken");
+                removeTokens();
             }
         }
     }
@@ -197,12 +132,12 @@ function SpotifyDataHandler(props: { spotifyData: SpotifyData, setSpotifyData: (
     }, [])
 
     useEffect(() => {
-        if (spotifyData.accessToken) {
+        if (!spotifyData.loaded && spotifyData.accessToken) {
             updateSpotifyData();
-        } else if (spotifyData.refreshToken) {
+        } else if (!spotifyData.loaded && spotifyData.refreshToken) {
             refreshAccessToken();
         }
-    }, [spotifyData.accessToken, spotifyData.refreshToken])
+    }, [spotifyData.accessToken, spotifyData.refreshToken, spotifyData.loaded])
 
     return <div></div>
 }
